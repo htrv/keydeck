@@ -34,6 +34,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Log.shared.write("=== keydeck запущен (\(Bundle.main.bundlePath)) ===")
 
         setupMainMenu()
+        NotificationCenter.default.addObserver(
+            forName: Lang.changed, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.setupMainMenu()
+            self?.rebuildMenu()
+        }
         Config.ensureDefaultExists()
         setupStatusItem()
         reloadConfig()
@@ -89,31 +95,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appItem = NSMenuItem()
         mainMenu.addItem(appItem)
         let appMenu = NSMenu()
-        let settings = NSMenuItem(title: "Открыть настройки",
+        let settings = NSMenuItem(title: Lang.shared.t("Открыть настройки", "打开设置", "Open Settings"),
                                   action: #selector(openSettings),
                                   keyEquivalent: ",")
         settings.target = self
         appMenu.addItem(settings)
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Скрыть keydeck",
+        appMenu.addItem(withTitle: Lang.shared.t("Скрыть keydeck", "隐藏 keydeck", "Hide keydeck"),
                         action: #selector(NSApplication.hide(_:)),
                         keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Выйти",
+        appMenu.addItem(withTitle: Lang.shared.t("Выйти", "退出", "Quit"),
                         action: #selector(NSApplication.terminate(_:)),
                         keyEquivalent: "q")
         appItem.submenu = appMenu
 
         let editItem = NSMenuItem()
         mainMenu.addItem(editItem)
-        let editMenu = NSMenu(title: "Правка")
+        let editMenu = NSMenu(title: Lang.shared.t("Правка", "编辑", "Edit"))
         // target не задаём: вызовы уходят по цепочке респондеров в активное поле.
-        editMenu.addItem(withTitle: "Отменить", action: Selector(("undo:")), keyEquivalent: "z")
-        editMenu.addItem(withTitle: "Повторить", action: Selector(("redo:")), keyEquivalent: "Z")
+        editMenu.addItem(withTitle: Lang.shared.t("Отменить", "撤销", "Undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: Lang.shared.t("Повторить", "重做", "Redo"), action: Selector(("redo:")), keyEquivalent: "Z")
         editMenu.addItem(.separator())
-        editMenu.addItem(withTitle: "Вырезать", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "Копировать", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "Вставить", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "Выбрать всё", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(withTitle: Lang.shared.t("Вырезать", "剪切", "Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: Lang.shared.t("Копировать", "复制", "Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: Lang.shared.t("Вставить", "粘贴", "Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: Lang.shared.t("Выбрать всё", "全选", "Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = editMenu
 
         NSApp.mainMenu = mainMenu
@@ -319,31 +325,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let trusted = accessibilityGranted()
 
         menu.addItem(disabledItem(trusted
-            ? "Разрешение Accessibility: выдано"
-            : "Разрешение Accessibility: НЕ выдано"))
+            ? Lang.shared.t("Разрешение Accessibility: выдано", "辅助功能权限：已授予", "Accessibility: granted")
+            : Lang.shared.t("Разрешение Accessibility: НЕ выдано", "辅助功能权限：未授予", "Accessibility: NOT granted")))
 
         if trusted {
-            menu.addItem(disabledItem(tapRunning ? "Перехват: работает" : "Перехват: не запущен"))
+            menu.addItem(disabledItem(tapRunning
+                ? Lang.shared.t("Перехват: работает", "拦截：运行中", "Capture: running")
+                : Lang.shared.t("Перехват: не запущен", "拦截：未启动", "Capture: not running")))
         } else {
-            menu.addItem(item("Выдать разрешение…", #selector(promptForAccessibility)))
-            menu.addItem(item("Открыть настройки приватности", #selector(openAccessibilitySettings)))
+            menu.addItem(item(Lang.shared.t("Выдать разрешение…", "授予权限…", "Grant permission…"),
+                              #selector(promptForAccessibility)))
+            menu.addItem(item(Lang.shared.t("Открыть настройки приватности", "打开隐私设置", "Open privacy settings"),
+                              #selector(openAccessibilitySettings)))
         }
 
         menu.addItem(.separator())
-        let settings = item("Настройки…", #selector(openSettings))
+        let settings = item(Lang.shared.t("Настройки…", "设置…", "Settings…"), #selector(openSettings))
         settings.keyEquivalent = ","
         menu.addItem(settings)
-        menu.addItem(item("Открыть конфиг", #selector(openConfig)))
-        menu.addItem(item("Перечитать конфиг", #selector(reloadConfig)))
-        menu.addItem(item("Открыть лог", #selector(openLog)))
-        menu.addItem(item("Благодарность: скопировать адрес", #selector(copyThanks)))
+        menu.addItem(item(Lang.shared.t("Открыть конфиг", "打开配置", "Open config"), #selector(openConfig)))
+        menu.addItem(item(Lang.shared.t("Перечитать конфиг", "重新读取配置", "Reload config"), #selector(reloadConfig)))
+        menu.addItem(item(Lang.shared.t("Открыть лог", "打开日志", "Open log"), #selector(openLog)))
+        menu.addItem(item(Lang.shared.t("Благодарность: скопировать адрес", "感谢：复制地址", "Tips: copy address"),
+                          #selector(copyThanks)))
         menu.addItem(.separator())
 
         if !trusted || !tapRunning {
-            menu.addItem(item("Перезапустить перехват", #selector(restartTap)))
+            menu.addItem(item(Lang.shared.t("Перезапустить перехват", "重新启动拦截", "Restart capture"),
+                              #selector(restartTap)))
         }
 
-        let quit = NSMenuItem(title: "Выйти", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = NSMenuItem(title: Lang.shared.t("Выйти", "退出", "Quit"),
+                              action: #selector(NSApplication.terminate(_:)),
+                              keyEquivalent: "q")
         quit.target = NSApp
         menu.addItem(quit)
 

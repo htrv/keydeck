@@ -47,17 +47,19 @@ struct Config: Decodable {
     /// Сколько кнопок у устройства.
     static let buttonCount = 8
 
-    /// Подписи позиций на корпусе — те же, что в README прошивки.
-    static let buttonTitles = [
-        "Кнопка 1 (F13) — верхний ряд, 1-я",
-        "Кнопка 2 (F14) — верхний ряд, 2-я",
-        "Кнопка 3 (F15) — верхний ряд, 3-я",
-        "Кнопка 4 (F16) — верхний ряд, 4-я",
-        "Кнопка 5 (F17) — нижний ряд, 1-я",
-        "Кнопка 6 (F18) — нижний ряд, 2-я",
-        "Кнопка 7 (F19) — нижний ряд, 3-я",
-        "Кнопка 8 (F20) — нижний ряд, 4-я",
-    ]
+    /// Подпись позиции на корпусе. 2 ряда по 4, слева направо, сверху вниз.
+    static func buttonTitle(for index: Int) -> String {
+        let row = index < 4
+            ? Lang.shared.t("верхний ряд", "上排", "top row")
+            : Lang.shared.t("нижний ряд", "下排", "bottom row")
+        let place = (index % 4) + 1
+        let key = 13 + index
+        return Lang.shared.t(
+            "Кнопка \(index + 1) (F\(key)) — \(row), \(place)-я",
+            "按键 \(index + 1)（F\(key)）— \(row)第 \(place) 个",
+            "Button \(index + 1) (F\(key)) — \(row), \(place)"
+        )
+    }
 
     static var directory: URL {
         FileManager.default.homeDirectoryForCurrentUser

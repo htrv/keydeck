@@ -82,17 +82,29 @@ final class ConfirmPanel {
 
 private struct ConfirmCard: View {
     @ObservedObject var state: ConfirmState
+    @ObservedObject private var lang = Lang.shared
     let onCancel: () -> Void
+
+    private func captionTitle(_ raw: String) -> String {
+        switch raw {
+        case "paste": return lang.t("вставит", "将粘贴", "will paste")
+        case "type": return lang.t("напечатает", "将键入", "will type")
+        case "command": return lang.t("команда", "命令", "command")
+        default: return raw
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
-                Text("Подтверждение: кнопка \(state.buttonIndex + 1) (F\(13 + state.buttonIndex))")
+                Text(lang.t("Подтверждение: кнопка \(state.buttonIndex + 1) (F\(13 + state.buttonIndex))",
+                            "确认：按键 \(state.buttonIndex + 1)（F\(13 + state.buttonIndex)）",
+                            "Confirm: button \(state.buttonIndex + 1) (F\(13 + state.buttonIndex))"))
                     .font(.headline)
                 Spacer(minLength: 0)
-                Button("Отмена") { onCancel() }
+                Button(lang.t("Отмена", "取消", "Cancel")) { onCancel() }
                     .controlSize(.small)
             }
 
@@ -111,7 +123,7 @@ private struct ConfirmCard: View {
             if let detail = state.preview.detail {
                 VStack(alignment: .leading, spacing: 2) {
                     if let caption = state.preview.detailCaption {
-                        Text(caption)
+                        Text(captionTitle(caption))
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -144,11 +156,15 @@ private struct ConfirmCard: View {
             Divider()
 
             HStack(alignment: .top, spacing: 6) {
-                Text("Нажми ту же кнопку — выполнить. Любая другая — отмена.")
+                Text(lang.t("Нажми ту же кнопку — выполнить. Любая другая — отмена.",
+                            "再按同一键执行。按其他键取消。",
+                            "Press the same button to run. Any other button cancels."))
                     .font(.footnote)
                 Spacer(minLength: 0)
                 if state.secondsLeft > 0 {
-                    Text("само отменится через \(state.secondsLeft) с")
+                    Text(lang.t("само отменится через \(state.secondsLeft) с",
+                                "\(state.secondsLeft) 秒后自动取消",
+                                "cancels in \(state.secondsLeft) s"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }

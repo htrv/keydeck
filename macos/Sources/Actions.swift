@@ -58,12 +58,12 @@ enum KeydeckKey: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .returnKey: return "Enter (Return)"
+        case .returnKey: return "Enter"
         case .tab: return "Tab"
         case .escape: return "Escape"
-        case .space: return "Пробел"
-        case .down: return "Стрелка вниз"
-        case .up: return "Стрелка вверх"
+        case .space: return Lang.shared.t("Пробел", "空格", "Space")
+        case .down: return Lang.shared.t("Стрелка вниз", "下箭头", "Down")
+        case .up: return Lang.shared.t("Стрелка вверх", "上箭头", "Up")
         }
     }
 
@@ -137,10 +137,10 @@ func confirmPreview(for binding: KeyBinding) -> ConfirmPreview {
             press: press
         )
     case .paste(let text):
-        return textPreview(caption: caption, body: text, detailCaption: "вставит",
+        return textPreview(caption: caption, body: text, detailCaption: "paste",
                            voice: followUp, press: press)
     case .type(let text):
-        return textPreview(caption: caption, body: text, detailCaption: "напечатает",
+        return textPreview(caption: caption, body: text, detailCaption: "type",
                            voice: followUp, press: press)
     case .say(let text):
         let spoken = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -167,7 +167,7 @@ func confirmPreview(for binding: KeyBinding) -> ConfirmPreview {
         return ConfirmPreview(
             headline: caption ?? "Команда",
             headlineIsVoice: false,
-            detailCaption: "команда",
+            detailCaption: "command",
             detail: body.isEmpty ? "пустая команда" : body,
             voice: followUp,
             press: press

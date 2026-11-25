@@ -1,74 +1,56 @@
 # keydeck
 
-Макро-клавиатура на **ESP32-S3 (EGBO)**, 8 кнопок, корпус напечатан на 3D-принтере.
-Устройство представляется маку как **Bluetooth-клавиатура**; что именно делать
-по каждой кнопке — решает приложение на маке, а не прошивка.
+[Русский](#ru) · [中文](#zh) · [English](#en)
 
-## Зачем разделение
+<a id="ru"></a>
 
-Скетч шлёт только код клавиши (F13..F20 — свободные функциональные, которых нет
-на обычной клавиатуре, поэтому их безопасно переназначать). Вся логика действий
-живёт на стороне мака:
+## Русский
 
-- вставить заготовленный текст в поле с курсором;
-- произнести фразу;
-- запустить команду в шелле;
-- перед действием спросить подтверждение той же кнопкой.
+Макроклавиатура на **ESP32-S3**: 8 кнопок, корпус напечатан. По Bluetooth это клавиатура и шлёт **F13–F20**. Что делать по кнопке, решает программа на маке: вставить текст, произнести фразу, запустить команду, перед действием спросить подтверждение. Прошивку при смене фразы перепрошивать не нужно.
 
-Так прошивку не нужно перепрошивать каждый раз, когда меняется действие кнопки —
-меняется только конфиг приложения.
+В программе язык интерфейса переключается в настройках: **русский, китайский, английский**.
 
-## Структура
+### Состав
 
 | Путь | Что это |
 |---|---|
-| `firmware/keydeck/` | скетч Arduino для ESP32-S3 |
-| `firmware/keydeck_scan/` | разовый сканер: находит, к каким GPIO подключены кнопки |
-| `firmware/libs/` | вендорнутые библиотеки (см. `KEYDECK-PATCH.md` внутри) |
-| `firmware/build.sh` | сборка и прошивка через `arduino-cli` |
-| `macos/` | приложение для мака: агент в статус-баре, см. `macos/README.md` |
-| `docs/ble-hid-macos-gotchas.md` | грабли BLE-HID на macOS и приёмы отладки |
-| `cad/` | корпус STL/3mf и колпачки DEV/PROD (Blender, STL, gcode) — см. `cad/README.md` |
+| `firmware/keydeck/` | скетч ESP32-S3 |
+| `firmware/keydeck_scan/` | сканер пинов кнопок |
+| `firmware/libs/` | библиотека BLE с правками, см. `KEYDECK-PATCH.md` |
+| `macos/` | программа для мака |
+| `cad/` | колпачки, gcode и шток кнопки питания |
+| `docs/` | фото сборки и заметки по BLE |
 
-## Железо
+Корпус в репозитории не лежит.
 
-- ESP32-S3 (EGBO), определяется маком как `Espressif USB JTAG_serial debug unit`
-- 8 кнопок, `INPUT_PULLUP` — кнопка на GND, второй вывод на GPIO
-- Распиновка задаётся массивом `KEY_PINS` в скетче
+- Основной: [Stream Cheap, Thingiverse 2822140](https://www.thingiverse.com/thing:2822140)
+- Вариант под ESP32-S3: [MakerWorld 1899311](https://makerworld.com/en/models/1899311-esp32-stream-cheap-deck-ble-usb-macro-keyboard)
 
-В скетче пример **по порядку**: 2 ряда по 4, слева направо, сверху вниз. На собранной плате провода сначала припаяны, и только потом кнопки в прошивке подогнаны под те пины, которые реально оказались на проводах. Этот разнобой в пример не входит.
+### Кнопки
+
+В скетче пример **по порядку**: два ряда по четыре, слева направо, сверху вниз. На собранной плате провода сначала припаяны, и только потом кнопки в прошивке подогнаны под те пины, которые реально оказались на проводах. Этот разнобой в пример не входит.
 
 | Кнопка | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 |---|---|---|---|---|---|---|---|---|
-| Позиция | верх. левая | верх. 2 | верх. 3 | верх. правая | ниж. левая | ниж. 2 | ниж. 3 | ниж. правая |
+| Место | верх, 1 | верх, 2 | верх, 3 | верх, 4 | низ, 1 | низ, 2 | низ, 3 | низ, 4 |
 | GPIO | 1 | 2 | 3 | 4 | 13 | 12 | 11 | 10 |
-| Шлёт | F13 | F14 | F15 | F16 | F17 | F18 | F19 | F20 |
+| Клавиша | F13 | F14 | F15 | F16 | F17 | F18 | F19 | F20 |
 
-The sketch example is in that straight order. On the built board the wires were soldered first, and the buttons in the firmware were then matched to those pins. That wiring is not the example.
+Кнопка на GND, второй контакт на GPIO, `INPUT_PULLUP`. **POWER** GPIO5, **LED** GPIO7, **BAT_ADC** GPIO8, RGB на плате GPIO48. На S3 заняты 19/20 (USB), 26–37 (flash) и обычно 43/44 (UART).
 
-Дополнительно: **POWER** GPIO5, **LED** GPIO7, **BAT_ADC** GPIO8 (делитель с B+),
-onboard RGB GPIO48.
+### Питание
 
-Если меняешь пайку — правь `KEY_PINS` и перепроверяй сканером. Учти, что на S3
-заняты пины 19/20 (native USB), 26–37 (flash, а на модулях с octal PSRAM ещё и
-33–37) и обычно 43/44 (UART0).
+Клавиатура работает без кабеля: внутри банка **3,7 В, около 500 мА·ч** от электронной сигареты и модуль зарядки **03962A** (TP4056 и защита DW01A). Банка на **B+ / B−**, плата питается с **OUT+ / OUT−**.
 
-### Питание: батарея, зарядка, кнопка, Type-C
+- Разъём **USB-C** и кнопка выключения врезаны в стенку. В модели корпуса этих окон нет: отверстия сверлили уже в напечатанной детали. Перед следующей печатью их лучше заложить в модель.
+- Кнопка на GPIO5 и GND. Долгое нажатие 1,5 с — сон, короткое — автосон через 2 часа. Будит только эта кнопка.
+- До свитча через стенку доходит шток `cad/case/Mini_Push_Switch_Extension_6.stl`, **6 × 6 × 12 мм**, без своей пружины. Печаталась эта длина, PETG. Исходник — [Extension shafts](https://www.printables.com/model/612608-extension-shafts-for-pushbutton-switches), размер `_6`.
+- Снизу приклеен кусок резины, чтобы корпус не скользил.
+- Светодиод «включено»: GPIO7 через **220 Ом**.
 
-Клавиатура работает без кабеля. Внутри корпуса лежат аккумулятор и плата зарядки, выход зарядки соединён с платой ESP32-S3.
+Ток заряда задаёт **R3** на TP4056. С завода **122** (1,2 кОм, 1 А). Для этой банки стоит **752** (7,5 кОм, около 160 мА). Резисторы светодиодов модуля **102** не менялись.
 
-- Аккумулятор — элемент **3,7 В, 500 мА·ч** от электронной сигареты.
-- Зарядка — модуль **03962A**: TP4056, защита DW01A. Аккумулятор на **B+ / B−**, плата питается с **OUT+ / OUT−**.
-- На корпусе отдельно выведен разъём **USB-C** — через него зарядка получает 5 В. Это не штатный разъём платы.
-- Кнопка выключения тоже добавлена в корпус: тактовая, на **GPIO5** и GND. Долгое нажатие (1,5 с) уводит плату в сон, короткое переключает автосон. Проснуться можно только этой кнопкой.
-- В готовой модели корпуса отверстий под этот разъём и кнопку нет. Их сверлили уже в напечатанной детали. Лучше заранее поправить модель дна и напечатать с окнами под USB-C и кнопку. Исправленного STL корпуса нет.
-- До тактовой кнопки через стенку доходит напечатанный шток, без своей пружины: возвращает сам свитч. Файл `cad/case/Mini_Push_Switch_Extension_6.stl`, габарит **6 × 6 × 12 мм**. На принтере эта длина одна, 13 октября 2026, PETG, около 5 минут. Других длин в истории нет. Исходная модель — [Extension shafts for pushbutton switches](https://www.printables.com/model/612608-extension-shafts-for-pushbutton-switches), вариант `_6`.
-- Снизу приклеен кусок резины, чтобы корпус не скользил по столу.
-- Индикатор «включено»: светодиод на **GPIO7**, анод через **220 Ом** на GPIO, катод на GND.
-
-Резистор тока на зарядке. У TP4056 ток задаёт **R3**. С завода там стоял **122** (1,2 кОм) — это **1 А**, для банки 500 мА·ч много. R3 заменён на **752** (7,5 кОм), ток около **160 мА**. R1, R2, R5, R6 с кодом **102** — резисторы светодиодов модуля, их не меняли.
-
-Уровень заряда в Bluetooth. Раньше скетч всегда слал 100%. Теперь раз в 30 с читает напряжение банки и шлёт процент в Battery Service (`setBatteryLevel`). Делитель **1:1** с **B+** (не с 5 В USB и не с выхода повышайки), два одинаковых резистора **100 кОм** (код **104**):
+Уровень заряда уходит в Bluetooth раз в 30 с. Делитель 1:1 с B+, два резистора **100 кОм** (код 104), середина на GPIO8:
 
 ```
 B+ --[100k]--+--[100k]-- GND
@@ -76,137 +58,180 @@ B+ --[100k]--+--[100k]-- GND
            GPIO8
 ```
 
-Без делителя в Serial будет `battery: no sense`, macOS останется на последнем известном значении.
-
-![Корпус сверху](docs/photos/top.jpg)
-![Кнопка и USB-C на боку](docs/photos/side.jpg)
-![Батарея, зарядка и проводка](docs/photos/inside.jpg)
-
-### Power: battery, charger, button, USB-C
-
-The keypad runs without a cable. A cell and a charger sit in the case; the charger output feeds the ESP32-S3.
-
-- Cell: **3.7 V, 500 mAh**, taken from a vape.
-- Charger: module **03962A** (TP4056 plus DW01A protection). Cell on **B+ / B−**, board on **OUT+ / OUT−**.
-- A **USB-C** socket on the case wall feeds the charger. It is not the socket on the ESP32 board.
-- A power button is added the same way: momentary switch from **GPIO5** to GND. Hold 1.5 s to sleep; a short press toggles idle sleep. Only this button wakes the board.
-- The published case has no holes for this socket or button. They were drilled into the part after it was printed. Change the base model first and print it with openings for USB-C and the button. There is no revised case STL.
-- A printed shaft reaches the tact switch through the wall. It has no spring of its own; the switch pushes it back. File `cad/case/Mini_Push_Switch_Extension_6.stl`, **6 × 6 × 12 mm**. The printer history has only this length, 13 October 2026, PETG, about 5 minutes. Source model: [Extension shafts for pushbutton switches](https://www.printables.com/model/612608-extension-shafts-for-pushbutton-switches), the `_6` size.
-- A piece of rubber is glued underneath so the case does not slide.
-- “Power on” LED: **GPIO7**, anode through **220 Ω**.
-
-Charge current. TP4056 sets it with **R3**. The stock part was **122** (1.2 kΩ), which is **1 A** — too much for a 500 mAh cell. R3 is now **752** (7.5 kΩ), about **160 mA**. **R1, R2, R5, R6** marked **102** are the module’s LED resistors and were left alone.
-
-Battery level over Bluetooth. The sketch used to report 100% forever. It now reads the cell every 30 s and sends the percent (`setBatteryLevel`). The divider is **1:1** from **B+** (not from 5 V USB), two **100 kΩ** resistors (marking **104**), midpoint on **GPIO8**. Without it the serial log says `battery: no sense`.
-
-## Прошивка
+### Сборка
 
 ```sh
 ./firmware/build.sh            # собрать
-./firmware/build.sh --upload   # собрать и прошить
-./firmware/build.sh --scan --upload  # прошить сканер пинов
+./firmware/build.sh --upload   # прошить
+./macos/build.sh --run         # программа на маке
 ```
 
-Плата **ESP32S3 Dev Module**, core **3.3.2**. Скрипт использует проектный
-`.arduino-cli.yaml`: ядро, библиотеки и кэш лежат в `.arduino/` внутри проекта,
-`~/Library/Arduino15` не трогается.
+Плата ESP32S3 Dev Module, ядро 3.3.2. В Arduino IDE: USB Mode → Hardware CDC and JTAG, USB CDC On Boot → Enabled. В Bluetooth устройство называется **keydeck**.
 
-Библиотек ставить не нужно. `ESP32 BLE Keyboard` (T-vK) вендорнута в
-`firmware/libs/ESP32_BLE_Keyboard` с шестью правками — сборка под core 3.x плюс
-баги NimBLE-ветки ядра; подробности и адреса строк в `KEYDECK-PATCH.md` рядом с
-ней. `NimBLE-Arduino` **не нужна**: на S3 встроенная библиотека `BLE` ядра уже
-работает поверх NimBLE (`nimble_port_init()`), поэтому `USE_NIMBLE` в
-`BleKeyboard.h` должен оставаться закомментированным.
+Колпачки и gcode — в `cad/`. Печать на Ender-3 V3 KE: `cad/print/all-petg/` (всё PETG) или `cad/print/1-pla-2-petg/` (сначала PLA, потом PETG). Наборов «всё PLA» и «сначала PETG, потом PLA» нет.
 
-Опции USB у S3 уже зашиты в `FQBN` внутри `build.sh`. При сборке через Arduino IDE
-их надо выставить руками (S3 придирчив к USB-режиму):
-
-- `USB Mode` → `Hardware CDC and JTAG`
-- `USB CDC On Boot` → `Enabled` (иначе `Serial` молчит)
-
-После `bleKeyboard.begin()` устройство появится как **keydeck** в списке
-Bluetooth-устройств мака.
-
-## Основа
-
-Скетч вырос из референса DIY Stream Deck mini macro keyboard
-(<https://www.partsnotincluded.com/diy-stream-deck-mini-macro-keyboard/>),
-который сам является переработкой библиотеки ESP32-BLE-Keyboard.
-
-## Состояние
-
-**Прошивка работает полностью, проверено на живой плате (ESP32-S3 + macOS):**
-
-- все 8 кнопок доходят до мака как **F13..F20** (подтверждено перехватом событий
-  на стороне macOS: `kc=105 F13 … kc=90 F20`);
-- BLE-периферия поднимается, macOS спаривает «Just Works», создаёт HID-клавиатуру
-  (`hidutil list` → `AppleUserHIDEventDriver`, наш VID `0x303A`);
-- плата стабильна при подключении (без циклов перезагрузки).
-
-Путь к этому состоянию был неочевидным — по дороге нашлось несколько багов ядра
-esp32 3.x под NimBLE и дефолтов библиотеки. Все описаны в
-`firmware/libs/ESP32_BLE_Keyboard/KEYDECK-PATCH.md` (патчи 1–6 + VID/PID). Коротко:
-краш при подключении (нулевой колбэк дескриптора), `Read Not Permitted` на Report
-Reference (кодировка прав Bluedroid vs NimBLE), и потолок кодов клавиш `0x65`,
-из-за которого F13..F20 не доходили.
-
-Приложение на маке тоже работает: перехватывает F13..F20 глобально и выполняет
-привязанное к кнопке действие — вставить заготовленный текст, напечатать его или
-выполнить команду. Привязки лежат в JSON и перечитываются без перезапуска.
-Сборка, выдача разрешения Accessibility и формат конфига — в `macos/README.md`.
-
-### Повторное спаривание после смены прошивки
-
-macOS кэширует Report Map по устройству. Если менял дескриптор/VID — чтобы мак
-перечитал: стереть ключи на плате и забыть устройство на маке.
-
-```sh
-# стереть ключи спаривания (NVS) на плате
-.arduino/.../esptool --chip esp32s3 -p <PORT> erase-region 0x9000 0x5000
-# на маке: Системные настройки → Bluetooth → keydeck → «Забыть».
-# если мак упорно держит старый дескриптор — сбросить кэш демона:
-sudo pkill bluetoothd
-```
-
-## Отладка BLE
-
-Полезное при разборе проблем с BLE-HID на macOS:
-
-```sh
-# HID-устройство keydeck (VID 0x303A → в выводе байты переставлены: 3a30)
-hidutil list | grep -i 3a30
-
-# какой Report Map реально применил мак (нужен "Max"=115 после патча 6;
-# "Max"=101 = держит старый кэш, надо перепарить)
-ioreg -l -w0 -r -c IOHIDDevice | grep -i keydeck | grep -o '"UsagePage"=7,"Max"=[0-9]*' | sort -u
-
-# что macOS думает о спаривании / ошибках GATT
-log show --last 5m --predicate 'process == "bluetoothd"' --style compact \
-  | grep -iE "Encryption|Pairing|Read Not Permitted|HOGP|error response"
-
-# состояние устройства
-system_profiler SPBluetoothDataType | grep -A 7 -i keydeck
-```
-
-Два тупика, в которые не стоит упираться второй раз:
-
-- **`CoreBluetooth` из CLI не видит HID-сервис.** macOS скрывает сервис `0x1812`
-  от приложений (даже спаренных) — `discoverServices` возвращает только Device
-  Info и Battery. Проверять нажатия надо перехватом событий (`CGEventTap`), а не
-  чтением GATT. Самому `CGEventTap` нужен Accessibility для процесса-слушателя —
-  это же разрешение понадобится будущему приложению.
-- **`blueutil --pair` не спаривает BLE-HID** (ходит по classic → `Page Timeout`),
-  а `--unpair` не всегда удаляет запись. Спаривание — только из UI Bluetooth;
-  надёжное удаление — «Забыть устройство» в UI или `sudo pkill bluetoothd`.
-
-## Благодарность
+### Благодарность
 
 Bitcoin: `bc1q8dtk9sar0862ckav0hacmvllwkhy00rvzn6puv`
 
-Тот же адрес в меню приложения («Благодарность: скопировать адрес») и внизу окна настроек.
+Тот же адрес в меню программы и внизу окна настроек.
 
-## Tips
+![Корпус сверху](docs/photos/top.jpg)
+![Кнопка и USB-C](docs/photos/side.jpg)
+![Внутри](docs/photos/inside.jpg)
+
+<a id="zh"></a>
+
+## 中文
+
+**ESP32-S3** 八键宏键盘，外壳为 3D 打印。通过蓝牙表现为键盘，发送 **F13–F20**。每个键做什么由 Mac 程序决定：粘贴文本、朗读、运行命令，或在执行前要求确认。更换短语时不用重新烧录固件。
+
+程序设置里可以切换界面语言，顺序为：**俄语、中文、英语**。
+
+### 内容
+
+| 路径 | 内容 |
+|---|---|
+| `firmware/keydeck/` | ESP32-S3 程序 |
+| `firmware/keydeck_scan/` | 按键引脚扫描 |
+| `firmware/libs/` | 改过的 BLE 库，见 `KEYDECK-PATCH.md` |
+| `macos/` | Mac 程序 |
+| `cad/` | 键帽、gcode、电源键延长杆 |
+| `docs/` | 组装照片和 BLE 笔记 |
+
+外壳文件不在本仓库。
+
+- 主外壳：[Thingiverse 2822140 Stream Cheap](https://www.thingiverse.com/thing:2822140)
+- ESP32-S3 变体：[MakerWorld 1899311](https://makerworld.com/en/models/1899311-esp32-stream-cheap-deck-ble-usb-macro-keyboard)
+
+### 按键
+
+固件示例按**顺序**排列：两行各四个，从左到右、从上到下。实机是先焊好线，再把固件里的按键改成实际焊到的引脚。示例里不用那套不规则接线。
+
+| 按键 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|
+| 位置 | 上 1 | 上 2 | 上 3 | 上 4 | 下 1 | 下 2 | 下 3 | 下 4 |
+| GPIO | 1 | 2 | 3 | 4 | 13 | 12 | 11 | 10 |
+| 键码 | F13 | F14 | F15 | F16 | F17 | F18 | F19 | F20 |
+
+按键一端接 GND，另一端接 GPIO，`INPUT_PULLUP`。**POWER** GPIO5，**LED** GPIO7，**BAT_ADC** GPIO8，板载 RGB 为 GPIO48。S3 上 19/20 为 USB，26–37 为 flash，43/44 通常为 UART。
+
+### 电源
+
+键盘不插线也能用。壳内是一节电子烟上的 **3.7 V、约 500 mAh** 电池，以及充电板 **03962A**（TP4056 和 DW01A 保护）。电池接 **B+ / B−**，主板从 **OUT+ / OUT−** 取电。
+
+- **USB-C** 和电源键是后开在侧壁上的。外壳模型里没有这些孔，是印完再钻的。下次打印前最好先改模型。
+- 电源键接 GPIO5 和 GND。长按 1.5 秒休眠，短按切换两小时自动休眠。只有这个键能唤醒。
+- 延长杆 `cad/case/Mini_Push_Switch_Extension_6.stl`，**6 × 6 × 12 mm**，自己没有弹簧。只印过这个长度，材料 PETG。来源：[Extension shafts](https://www.printables.com/model/612608-extension-shafts-for-pushbutton-switches) 的 `_6`。
+- 底部粘了一块橡胶，避免在桌上滑动。
+- 「开机」灯：GPIO7，经 **220 Ω**。
+
+充电电流由 TP4056 的 **R3** 决定。出厂是 **122**（1.2 kΩ，1 A）。这块电池换成了 **752**（7.5 kΩ，约 160 mA）。模块指示灯电阻 **102** 没动。
+
+电量每 30 秒经蓝牙上报。B+ 上 1:1 分压，两只 **100 kΩ**（标记 104），中点接 GPIO8：
+
+```
+B+ --[100k]--+--[100k]-- GND
+             |
+           GPIO8
+```
+
+### 编译
+
+```sh
+./firmware/build.sh            # 编译
+./firmware/build.sh --upload   # 烧录
+./macos/build.sh --run         # 运行 Mac 程序
+```
+
+开发板选 ESP32S3 Dev Module，核心 3.3.2。Arduino IDE：USB Mode → Hardware CDC and JTAG，USB CDC On Boot → Enabled。蓝牙名称是 **keydeck**。
+
+键帽和 gcode 在 `cad/`。Ender-3 V3 KE：`cad/print/all-petg/`（全部 PETG）或 `cad/print/1-pla-2-petg/`（先 PLA，后 PETG）。没有「全部 PLA」和「先 PETG 后 PLA」。
+
+### 感谢
 
 Bitcoin: `bc1q8dtk9sar0862ckav0hacmvllwkhy00rvzn6puv`
 
-The Mac app shows the same address in the status menu and at the bottom of the settings window.
+程序菜单和设置窗口底部是同一个地址。
+
+![外壳](docs/photos/top.jpg)
+![侧边按键和 USB-C](docs/photos/side.jpg)
+![内部](docs/photos/inside.jpg)
+
+<a id="en"></a>
+
+## English
+
+An **ESP32-S3** macro keypad with 8 keys and a printed case. Over Bluetooth it is a keyboard and sends **F13–F20**. The Mac app decides what each key does: paste text, speak, run a command, or ask for confirmation first. Changing a phrase does not require reflashing.
+
+The app settings switch the interface language: **Russian, Chinese, English**.
+
+### Layout
+
+| Path | What |
+|---|---|
+| `firmware/keydeck/` | ESP32-S3 sketch |
+| `firmware/keydeck_scan/` | pin scanner for the keys |
+| `firmware/libs/` | patched BLE library, see `KEYDECK-PATCH.md` |
+| `macos/` | Mac app |
+| `cad/` | keycaps, gcode, and the power-button shaft |
+| `docs/` | build photos and BLE notes |
+
+The case files are not in this repo.
+
+- Main case: [Stream Cheap on Thingiverse 2822140](https://www.thingiverse.com/thing:2822140)
+- ESP32-S3 variant: [MakerWorld 1899311](https://makerworld.com/en/models/1899311-esp32-stream-cheap-deck-ble-usb-macro-keyboard)
+
+### Keys
+
+The sketch example is in a **straight order**: two rows of four, left to right, top to bottom. On the built board the wires were soldered first, and the keys in the firmware were then matched to those pins. That irregular wiring is not the example.
+
+| Button | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|
+| Place | top 1 | top 2 | top 3 | top 4 | bottom 1 | bottom 2 | bottom 3 | bottom 4 |
+| GPIO | 1 | 2 | 3 | 4 | 13 | 12 | 11 | 10 |
+| Key | F13 | F14 | F15 | F16 | F17 | F18 | F19 | F20 |
+
+One side of each switch is GND, the other is a GPIO, `INPUT_PULLUP`. **POWER** is GPIO5, **LED** is GPIO7, **BAT_ADC** is GPIO8, onboard RGB is GPIO48. On the S3, 19/20 are USB, 26–37 are flash, and 43/44 are usually UART.
+
+### Power
+
+The keypad runs without a cable. Inside is a **3.7 V, about 500 mAh** cell from a vape and charger module **03962A** (TP4056 plus DW01A protection). The cell is on **B+ / B−**. The board is powered from **OUT+ / OUT−**.
+
+- The **USB-C** socket and the power button were cut into the wall. The case model has no holes for them; they were drilled after printing. Add the openings before the next print.
+- The button is GPIO5 to GND. Hold 1.5 s to sleep. A short press toggles the 2-hour idle sleep. Only this button wakes the board.
+- Shaft `cad/case/Mini_Push_Switch_Extension_6.stl`, **6 × 6 × 12 mm**, no spring of its own. This length was printed in PETG. Source: [Extension shafts](https://www.printables.com/model/612608-extension-shafts-for-pushbutton-switches), size `_6`.
+- A piece of rubber is glued underneath so the case does not slide.
+- “Power on” LED: GPIO7 through **220 Ω**.
+
+Charge current is set by **R3** on the TP4056. Stock is **122** (1.2 kΩ, 1 A). This cell uses **752** (7.5 kΩ, about 160 mA). The module LED resistors marked **102** were left as they were.
+
+Battery level is sent over Bluetooth every 30 s. A 1:1 divider from B+, two **100 kΩ** resistors (marking 104), midpoint on GPIO8:
+
+```
+B+ --[100k]--+--[100k]-- GND
+             |
+           GPIO8
+```
+
+### Build
+
+```sh
+./firmware/build.sh            # build
+./firmware/build.sh --upload   # flash
+./macos/build.sh --run         # run the Mac app
+```
+
+Board ESP32S3 Dev Module, core 3.3.2. In the Arduino IDE: USB Mode → Hardware CDC and JTAG, USB CDC On Boot → Enabled. The Bluetooth name is **keydeck**.
+
+Keycaps and gcode are in `cad/`. For an Ender-3 V3 KE use `cad/print/all-petg/` (all PETG) or `cad/print/1-pla-2-petg/` (PLA first, then PETG). There is no “all PLA” set and no “PETG then PLA” set.
+
+### Tips
+
+Bitcoin: `bc1q8dtk9sar0862ckav0hacmvllwkhy00rvzn6puv`
+
+The same address is in the app menu and at the bottom of the settings window.
+
+![Case](docs/photos/top.jpg)
+![Power button and USB-C](docs/photos/side.jpg)
+![Inside](docs/photos/inside.jpg)

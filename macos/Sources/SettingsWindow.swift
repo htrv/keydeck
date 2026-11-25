@@ -70,26 +70,32 @@ struct BindingDraft: Identifiable {
     var summary: String {
         var base: String
         switch action {
-        case "paste": base = "Вставить: \(text)"
-        case "type": base = "Напечатать: \(text)"
-        case "say": base = "Проговорить: \(text)"
-        case "shell": base = "Команда: \(descriptionValue ?? command)"
-        default: base = "действия нет"
+        case "paste": base = Lang.shared.t("Вставить: \(text)", "粘贴：\(text)", "Paste: \(text)")
+        case "type": base = Lang.shared.t("Напечатать: \(text)", "键入：\(text)", "Type: \(text)")
+        case "say": base = Lang.shared.t("Проговорить: \(text)", "朗读：\(text)", "Speak: \(text)")
+        case "shell": base = Lang.shared.t("Команда: \(descriptionValue ?? command)",
+                                           "命令：\(descriptionValue ?? command)",
+                                           "Command: \(descriptionValue ?? command)")
+        default: base = Lang.shared.t("действия нет", "无动作", "no action")
         }
         if let key = KeydeckKey.from(press) { base += " → \(key.title)" }
-        if let sayValue { base += " → сказать: \(sayValue)" }
-        if confirm { base = "подтверждать: " + base }
+        if let sayValue {
+            base += Lang.shared.t(" → сказать: \(sayValue)", " → 朗读：\(sayValue)", " → say: \(sayValue)")
+        }
+        if confirm { base = Lang.shared.t("подтверждать: ", "需确认：", "confirm: ") + base }
         return base
     }
 }
 
-private let actionOptions: [(String, String)] = [
-    ("none", "Ничего"),
-    ("paste", "Вставить текст (через буфер обмена)"),
-    ("type", "Напечатать текст"),
-    ("say", "Произнести текст"),
-    ("shell", "Выполнить команду"),
-]
+private func actionOptions() -> [(String, String)] {
+    [
+        ("none", Lang.shared.t("Ничего", "无", "Nothing")),
+        ("paste", Lang.shared.t("Вставить текст (через буфер обмена)", "粘贴文本（经剪贴板）", "Paste text (via clipboard)")),
+        ("type", Lang.shared.t("Напечатать текст", "直接键入文本", "Type text")),
+        ("say", Lang.shared.t("Произнести текст", "朗读文本", "Speak text")),
+        ("shell", Lang.shared.t("Выполнить команду", "运行命令", "Run a command")),
+    ]
+}
 
 struct SettingsView: View {
     @State var drafts: [BindingDraft]
@@ -103,19 +109,31 @@ struct SettingsView: View {
     @State private var message = ""
 
     @ObservedObject private var highlight = PressHighlight.shared
+    @ObservedObject private var lang = Lang.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Кнопки расположены как на корпусе: 2 ряда по 4, слева направо.")
+                Picker(lang.t("Язык", "语言", "Language"), selection: $lang.current) {
+                    ForEach(AppLanguage.allCases) { item in
+                        Text(item.title).tag(item)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 360, alignment: .leading)
+                Text(lang.t("Кнопки расположены как на корпусе: 2 ряда по 4, слева направо.",
+                            "按键布局与外壳一致：两行各四个，从左到右。",
+                            "Buttons match the case: 2 rows of 4, left to right."))
                     .font(.footnote)
                     .foregroundColor(.secondary)
                 HStack(spacing: 6) {
                     Image(systemName: "hand.tap")
-                    Text("Пока это окно открыто, кнопки только подсвечиваются — действия не выполняются.")
+                    Text(lang.t("Пока это окно открыто, кнопки только подсвечиваются — действия не выполняются.",
+                                "设置窗口打开时，按键只高亮，不执行动作。",
+                                "While this window is open, buttons only highlight — actions do not run."))
                     Spacer(minLength: 0)
                     if let last = highlight.last {
-                        Text("нажата: \(last + 1)")
+                        Text(lang.t("нажата: \(last + 1)", "已按下：\(last + 1)", "pressed: \(last + 1)"))
                             .foregroundColor(.accentColor)
                     }
                 }
@@ -128,7 +146,9 @@ struct SettingsView: View {
             .padding(16)
 
             Divider()
-            Text("Благодарность: \(Support.bitcoinAddress)")
+            Text(lang.t("Благодарность: \(Support.bitcoinAddress)",
+                        "感谢：\(Support.bitcoinAddress)",
+                        "Tips: \(Support.bitcoinAddress)"))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .textSelection(.enabled)
@@ -140,9 +160,9 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                 Spacer()
-                Button("Отмена") { onClose() }
+                Button(lang.t("Отмена", "取消", "Cancel")) { onClose() }
                     .keyboardShortcut(.cancelAction)
-                Button("Сохранить и закрыть") { saveAndClose() }
+                Button(lang.t("Сохранить и закрыть", "保存并关闭", "Save and close")) { saveAndClose() }
             }
             .padding(12)
         }
@@ -210,7 +230,7 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
-        .help(Config.buttonTitles[index])
+        .help(Config.buttonTitle(for: index))
     }
 
     // MARK: - Редактор выбранной кнопки
@@ -218,11 +238,11 @@ struct SettingsView: View {
     private var editor: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text(Config.buttonTitles[selected])
+                Text(Config.buttonTitle(for: selected))
                     .font(.headline)
 
-                Picker("Действие", selection: $drafts[selected].action) {
-                    ForEach(actionOptions, id: \.0) { option in
+                Picker(lang.t("Действие", "动作", "Action"), selection: $drafts[selected].action) {
+                    ForEach(actionOptions(), id: \.0) { option in
                         Text(option.1).tag(option.0)
                     }
                 }
@@ -230,27 +250,34 @@ struct SettingsView: View {
 
                 switch drafts[selected].action {
                 case "shell":
-                    fieldLabel("Подпись на карточке — крупно")
-                    TextField("например: Деплой на прод", text: $drafts[selected].description)
+                    fieldLabel(lang.t("Подпись на карточке — крупно", "确认卡片上的大字标题", "Card title — large"))
+                    TextField(lang.t("например: Деплой на прод", "例如：发布到生产", "for example: Deploy to production"),
+                              text: $drafts[selected].description)
                         .textFieldStyle(.roundedBorder)
-                    Text("На подтверждении эта строка крупная, команда под ней — мелкая, чтобы сверить.")
+                    Text(lang.t("На подтверждении эта строка крупная, команда под ней — мелкая, чтобы сверить.",
+                                "确认时这行字很大，命令在下面用小字，便于核对。",
+                                "On the confirm card this line is large; the command stays small underneath so you can check it."))
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    fieldLabel("Команда (выполняется через /bin/sh -lc)")
+                    fieldLabel(lang.t("Команда (выполняется через /bin/sh -lc)",
+                                       "命令（通过 /bin/sh -lc 执行）",
+                                       "Command (run via /bin/sh -lc)"))
                     editorField(text: $drafts[selected].command, monospaced: true)
                     deployExample
                 case "none":
-                    Text("Само по себе действие не выполняется.")
+                    Text(lang.t("Само по себе действие не выполняется.",
+                                "本身不执行任何动作。",
+                                "No action runs by itself."))
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 default:
-                    fieldLabel("Текст")
+                    fieldLabel(lang.t("Текст", "文本", "Text"))
                     editorField(text: $drafts[selected].text, monospaced: false)
                 }
 
                 Divider().padding(.vertical, 2)
 
-                fieldLabel("После действия нажать клавишу")
+                fieldLabel(lang.t("После действия нажать клавишу", "动作之后按键", "Key to press after the action"))
                 Picker("", selection: $drafts[selected].press) {
                     ForEach(KeydeckKey.pickerOptions, id: \.0) { option in
                         Text(option.1).tag(option.0)
@@ -260,39 +287,57 @@ struct SettingsView: View {
                 .frame(maxWidth: 260, alignment: .leading)
 
                 HStack(spacing: 8) {
-                    Text("Пауза перед клавишей, мс:")
+                    Text(lang.t("Пауза перед клавишей, мс:", "按键前的停顿，毫秒：", "Pause before the key, ms:"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     TextField("\(ActionRunner.defaultFollowUpDelayMS)",
                               text: $drafts[selected].delay)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 70)
-                    Text("пусто — \(ActionRunner.defaultFollowUpDelayMS)")
+                    Text(lang.t("пусто — \(ActionRunner.defaultFollowUpDelayMS)",
+                                "留空 — \(ActionRunner.defaultFollowUpDelayMS)",
+                                "empty — \(ActionRunner.defaultFollowUpDelayMS)"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                Text("Пауза нужна, чтобы приложение успело увидеть вставленный текст. "
-                     + "Без неё Enter уходит в пустое поле — так ведёт себя Telegram. "
-                     + "Для «напечатать» паузу стоит увеличить.")
+                Text(lang.t(
+                    "Пауза нужна, чтобы приложение успело увидеть вставленный текст. "
+                        + "Без неё Enter уходит в пустое поле — так ведёт себя Telegram. "
+                        + "Для «напечатать» паузу стоит увеличить.",
+                    "停顿是为了让目标程序看到刚插入的文字。没有停顿时，Enter 会打进空输入框，Telegram 就是这样。直接键入时建议把停顿加长。",
+                    "The pause lets the target app see the inserted text. Without it, Enter lands in an empty field — Telegram does this. Increase the pause when typing."
+                ))
                     .font(.caption2)
                     .foregroundColor(.secondary)
 
                 Divider().padding(.vertical, 2)
 
-                Toggle("Спрашивать подтверждение перед выполнением", isOn: $drafts[selected].confirm)
+                Toggle(lang.t("Спрашивать подтверждение перед выполнением",
+                               "执行前要求确认",
+                               "Ask for confirmation before running"),
+                       isOn: $drafts[selected].confirm)
                     .toggleStyle(.checkbox)
-                Text("Покажется карточка с описанием действия: нажатие той же кнопки — выполнить, любой другой — отмена.")
+                Text(lang.t("Покажется карточка с описанием действия: нажатие той же кнопки — выполнить, любой другой — отмена.",
+                            "会弹出动作说明：再按同一键执行，按其他键取消。",
+                            "A card describes the action: the same button runs it, any other button cancels."))
                     .font(.caption2)
                     .foregroundColor(.secondary)
 
                 Divider().padding(.vertical, 2)
 
-                fieldLabel("Произнести после выполнения — необязательно")
-                TextField("например: Готово", text: $drafts[selected].say)
+                fieldLabel(lang.t("Произнести после выполнения — необязательно",
+                                  "执行后朗读 — 可选",
+                                  "Speak after running — optional"))
+                TextField(lang.t("например: Готово", "例如：完成", "for example: Done"),
+                          text: $drafts[selected].say)
                     .textFieldStyle(.roundedBorder)
                 Text(drafts[selected].action == "shell"
-                     ? "Для команды и клавиша, и озвучка срабатывают только если она завершилась успешно."
-                     : "Клавиша и озвучка срабатывают сразу после действия.")
+                     ? lang.t("Для команды и клавиша, и озвучка срабатывают только если она завершилась успешно.",
+                              "命令只有成功结束后才会按键和朗读。",
+                              "For a command, the key and the voice run only if it succeeds.")
+                     : lang.t("Клавиша и озвучка срабатывают сразу после действия.",
+                              "按键和朗读在动作之后立刻发生。",
+                              "The key and the voice run right after the action."))
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
@@ -304,22 +349,24 @@ struct SettingsView: View {
     private var deployExample: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                Text("Пример: произнести «Готово»")
+                Text(lang.t("Пример: произнести «Готово»", "示例：朗读「完成」", "Example: say “Done”"))
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer(minLength: 0)
-                Button("Подставить пример") {
-                    drafts[selected].command = SettingsView.deployExample
+                Button(lang.t("Подставить пример", "填入示例", "Insert example")) {
+                    drafts[selected].command = lang.t(#"say \"Готово\""#, #"say \"完成\""#, #"say \"Done\""#)
                 }
                 .controlSize(.small)
             }
-            Text(SettingsView.deployExample)
+            Text(lang.t(#"say \"Готово\""#, #"say \"完成\""#, #"say \"Done\""#))
                 .font(.system(.caption, design: .monospaced))
                 .textSelection(.enabled)
                 .padding(6)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.12)))
-            Text("Это обычная команда оболочки. Можно дописать что угодно ещё.")
+            Text(lang.t("Это обычная команда оболочки. Можно дописать что угодно ещё.",
+                        "这是普通的 shell 命令，后面可以再写别的。",
+                        "This is an ordinary shell command. You can add anything else."))
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
@@ -352,7 +399,9 @@ struct SettingsView: View {
             onSave(drafts.map { $0.binding })
             onClose()
         } catch {
-            message = "Не удалось сохранить: \(error.localizedDescription)"
+            message = Lang.shared.t("Не удалось сохранить: \(error.localizedDescription)",
+                                     "保存失败：\(error.localizedDescription)",
+                                     "Could not save: \(error.localizedDescription)")
         }
     }
 }
@@ -395,7 +444,14 @@ final class SettingsWindowController {
                               styleMask: [.titled, .closable, .miniaturizable, .resizable],
                               backing: .buffered,
                               defer: false)
-        window.title = "keydeck — привязки кнопок"
+        window.title = Lang.shared.t("keydeck — привязки кнопок",
+                                      "keydeck — 按键绑定",
+                                      "keydeck — button bindings")
+        NotificationCenter.default.addObserver(forName: Lang.changed, object: nil, queue: .main) { [weak window] _ in
+            window?.title = Lang.shared.t("keydeck — привязки кнопок",
+                                           "keydeck — 按键绑定",
+                                           "keydeck — button bindings")
+        }
         window.isReleasedWhenClosed = false
         window.center()
         // Сбрасываем подсветку, чтобы при следующем открытии не осталось
