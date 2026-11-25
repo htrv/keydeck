@@ -1,0 +1,18 @@
+.DS_Store
+**/.DS_Store
+*.swp
+*~
+# Arduino IDE
+build/
+# локальное ядро ESP32 и библиотеки (см. .arduino-cli.yaml)
+.arduino/
+*.bin
+*.elf
+*.hex
+# macOS / Xcode
+xcuserdata/
+DerivedData/
+*.xcworkspace/xcuserdata/
+
+# исходник Blender остаётся только в локальном репозитории
+*.blend

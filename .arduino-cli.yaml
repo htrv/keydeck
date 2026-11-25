@@ -1,0 +1,18 @@
+# Проектный конфиг arduino-cli: всё (ядро, тулчейн, библиотеки) лежит внутри
+# проекта, чтобы не трогать ~/Library/Arduino15.
+# Использование: arduino-cli --config-file .arduino-cli.yaml <команда>
+#
+
+board_manager:
+  additional_urls:
+    - https://espressif.github.io/arduino-esp32/package_esp32_index.json
+
+directories:
+  data: .arduino/data
+  downloads: .arduino/staging
+  user: .arduino/user
+
+# иначе arduino-cli пытается писать в ~/Library/Caches/arduino
+build_cache:
+  path: .arduino/cache
+

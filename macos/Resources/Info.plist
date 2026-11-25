@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Keydeck</string>
+    <key>CFBundleDisplayName</key>
+    <string>keydeck</string>
+    <key>CFBundleExecutable</key>
+    <string>Keydeck</string>
+    <!-- Идентификатор важен: по нему macOS запоминает выданное разрешение
+         Accessibility. Меняешь его — разрешение придётся выдать заново. -->
+    <key>CFBundleIdentifier</key>
+    <string>ru.evgeniy.keydeck</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <!-- Агент: без иконки в Dock и без главного окна. -->
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>
